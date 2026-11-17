@@ -1,0 +1,3 @@
+import { Newspaper } from '@/components/newspaper';
+import { SAMPLE } from '@/lib/content';
+export default function Home(){return <main className="home"><section><span className="home-mark" aria-hidden="true">✳</span><h1>Some stories deserve their own newspaper.</h1><p>A birthday, a familiar face, a lifetime of little moments. Make a personal edition of The Mon Family Times to keep, print, and share.</p><div className="actions"><a className="button" href="/studio">Try the newspaper editor</a><a className="button secondary" href="/admin">Admin login</a></div><p className="home-note">Two A4 pages. Made with love. Printed at home.</p></section><div className="home-preview" aria-hidden="true"><Newspaper content={SAMPLE}/></div></main>;}

@@ -1,0 +1,23 @@
+node_modules/
+.next/
+.env*
+!.env.example
+*.tsbuildinfo
+artifacts/
+
+# Hosting links, local agent state, and potentially sensitive diagnostics
+.vercel/
+.agents/
+.codex/
+*.log
+
+# Credentials / signing material
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local verification output
+coverage/
+playwright-report/
+test-results/
