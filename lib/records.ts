@@ -15,7 +15,7 @@ export function changeRecord(record:NewspaperRecord, operation:Operation, input?
  const content=validateContent(input);
  if(operation==='save') return {...next,draft:content};
  if(operation==='publish') {
-  if(!content.story || !content.memories || !content.wishes || !content.closing || !content.portrait) throw new Error('Add a portrait and complete every story field before publishing.');
+  if(!content.story || !content.memories || !content.wishes || !content.closing || !content.portrait || !content.groupPhoto || !content.memoryPhoto) throw new Error('Add all three photos and complete every story field before publishing.');
   return {...next,draft:content,published:{...content}};
  }
  throw new Error('Invalid action.');

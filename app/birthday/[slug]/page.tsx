@@ -17,5 +17,6 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
 }
 export default async function Birthday({params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const content=await published(slug);if(!content)notFound();
- return <main className="public-page"><div className="public-tools no-print"><p>A birthday keepsake<br/>from the Mon family.</p><PrintButton/></div><Newspaper content={{...content,portrait:''}} portraitSrc={`/api/portrait/${slug}`}/></main>;
+ const photoSources={portrait:content.portrait?`/api/portrait/${slug}`:'',groupPhoto:content.groupPhoto?`/api/portrait/${slug}?slot=groupPhoto`:'',memoryPhoto:content.memoryPhoto?`/api/portrait/${slug}?slot=memoryPhoto`:''};
+ return <main className="public-page"><div className="public-tools no-print"><p>A birthday keepsake<br/>from the Mon family.</p><PrintButton/></div><Newspaper content={{...content,portrait:'',groupPhoto:'',memoryPhoto:''}} photoSources={photoSources}/></main>;
 }

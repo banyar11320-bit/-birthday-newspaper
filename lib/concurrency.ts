@@ -5,7 +5,7 @@ export async function conditionalUpdate<T>(store:ConditionalStore<T>,expected:un
  if(typeof expected!=='string' || !expected || expected.length>200)throw new HttpError(400,'Reload this newspaper before saving.');
  const current=await store.read();
  if(!current)throw new HttpError(404,'Newspaper not found.');
- if(current.etag!==expected)throw new HttpError(409,'This edition changed in another tab. Reload before editing again. Your changes have not been saved.');
+ if(current.etag!==expected)throw new HttpError(409,'This edition changed in another tab. Your changes have not been saved. Copy your unsaved text and keep your photo files, then reload to review the latest edition before reapplying your changes.');
  const value=transform(current.value);
  // The remote store must condition this write on expected as well: checking above alone is racy.
  const etag=await store.write(value,expected);

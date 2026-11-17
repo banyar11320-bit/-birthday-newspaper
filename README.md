@@ -10,7 +10,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `/studio` to edit the sample, upload a portrait, preview, and print without credentials. Work remains only in the current tab; there is deliberately no simulated save or publishing. `/admin` is the authenticated persistent workflow.
+Open `/studio` to edit the sample, upload three photos, preview, and print without credentials. Work remains only in the current tab; there is deliberately no simulated save or publishing. `/admin` is the authenticated persistent workflow.
 
 ## Configure admin access
 
@@ -29,18 +29,18 @@ All mutations verify the session on the server and reject foreign/missing origin
 
 Connect a development/private Blob store before testing persistence. No production store was changed during implementation.
 
-Each edition has an immutable random UUID, also used as its stable public slug. One private object at `newspapers/<uuid>.json` contains its draft, published snapshot, and publication metadata. Each snapshot includes a bounded base64 JPEG/PNG portrait. This intentionally avoids partially committed text/photo updates and unsafe multi-object transactions. It trades larger object reads for a simpler, atomic workflow suitable for a small family collection.
+Each edition has an immutable random UUID, also used as its stable public slug. One private object at `newspapers/<uuid>.json` contains its draft, published snapshot, and publication metadata. Each snapshot includes three bounded base64 JPEG/PNG photos: a 3:4 member portrait on page 1, plus a landscape group photo and a memory photo on page 2. Legacy records without the extra slots remain readable; no migration or existing snapshot rewrite is performed. This intentionally avoids partially committed text/photo updates and unsafe multi-object transactions. It trades larger object reads for a simpler, atomic workflow suitable for a small family collection.
 
 - Save Draft never changes the published snapshot.
-- Publish validates required text and portrait, then updates that edition's published snapshot.
+- Publish validates required text and all three photos (including when republishing an older edition), then updates that edition's published snapshot.
 - Unpublish removes the published snapshot.
 - Delete replaces the record with a small tombstone, erasing its text/photo snapshots and preventing stale requests from recreating it. The UUID/timestamp tombstone is intentionally retained.
-- ETag conditional writes reject stale edits and concurrent overwrites. Reloading after a conflict discards unsaved edits, so copy any text you need first.
+- ETag conditional writes reject stale edits and concurrent overwrites. Blob downloads request `Accept-Encoding: identity` to retain a strong origin ETag; compressed representation validators must not be used as write revisions. Reloading after a conflict discards unsaved edits, so copy any text you need first.
 - The dashboard lists individual objects with pagination; no shared JSON index exists. Deleted records can occupy a page of listing results; use Next editions when shown.
 - Public pages and image routes use consistent private reads (`useCache: false`), are dynamically rendered, and do not cache personalized responses. Only the published snapshot is rendered. Raw Blob URLs/tokens are never exposed.
 - Unpublishing cannot retract copies, screenshots, PDFs, or pages a visitor has already opened.
 
-The UI accepts JPEG/PNG source files up to 5 MB, resizes them to at most 1400 pixels on the longest side, and re-encodes to JPEG. The server enforces payload/field limits and checks raster MIME/magic bytes. SVG, remote image URLs, and oversized portraits are rejected. The saved image is limited to approximately 1 MB. Text is normalized to a single paragraph per field for predictable printing.
+The UI accepts JPEG/PNG source files up to 5 MB, resizes them to at most 1200 pixels on the longest side, and re-encodes to JPEG. The server enforces payload/field limits and checks raster MIME/magic bytes. SVG, remote image URLs, and oversized portraits are rejected. New uploads are re-encoded to at most 400,000 data-URL characters each. All three saved image data URLs together are limited to 1,400,000 characters; this also accepts existing portrait-only records within the previous limit. The request cap remains 1.5 MB. Replace an oversized legacy portrait before adding more photos if the combined limit is exceeded. Text is normalized to a single paragraph per field for predictable printing.
 
 ## Print / Save PDF
 
@@ -58,9 +58,9 @@ npm run build
 npx playwright test
 ```
 
-Browser tests launch an isolated development server on `127.0.0.1:3017` with temporary test-only authentication and **no Blob token**, so they cannot mutate real storage. Set `CHROME_PATH` if Chrome is not at `/opt/google/chrome/chrome`. Browser tests produce screenshots and PDFs in ignored `artifacts/`.
+Browser tests launch an isolated development server on `127.0.0.1:3027` with temporary test-only authentication and **no Blob token**, so they cannot mutate real storage. Set `CHROME_PATH` if Chrome is not at `/opt/google/chrome/chrome`. Browser tests produce screenshots and PDFs in ignored `artifacts/`.
 
-The unit concurrency tests use an in-memory conditional-store adapter to test the same revision/limiter code used by Blob. They are not evidence of live Blob persistence. See `docs/verification.md` for the measured results and external blockers.
+Run `QA_MOCK_BLOB=1 npx playwright test tests/browser/publishing.spec.ts` for authenticated save/reload/publish/public-page and conflict checks. This explicit test mode preloads an in-memory HTTP transport with a fake token, blocks external networking, and exercises the real Blob SDK. It is never loaded by dev/start/build. The unit tests cover both the conditional-store adapter and actual SDK with mocked HTTP, including compressed ETags and competing writes. They are not evidence of live Blob persistence. See `docs/verification.md` for the measured results and external blockers.
 
 The `zod` override pins patched 4.6.7 within major version 4 because the Blob SDK's CLI configuration dependency pins vulnerable 4.1.11. Revisit this override when upstream updates; do not blindly run `npm audit fix --force`.
 
@@ -85,6 +85,6 @@ After the GitHub push is separately approved, configure the Vercel project:
 - Production login deliberately fails closed without private Blob storage because the login attempt counter must be durable.
 - Verify save/reload, publishing, public viewing, unpublishing, and two-member isolation in the test environment before production use. No deployment is authorized by these instructions.
 
-The application's request cap is 1.5 MB, and a saved record with both draft and published portraits is under 3 MB, below Vercel's documented 4.5 MB function payload limit. No local disk persistence, browser automation, or PDF service runs in production.
+The application's request cap is 1.5 MB, and a saved record with both draft and published photo sets is under 3 MB, below Vercel's documented 4.5 MB function payload limit. No local disk persistence, browser automation, or PDF service runs in production.
 
 References: [supported Node versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions), [function limits](https://vercel.com/docs/functions/limitations), [environment configuration](https://vercel.com/docs/environment-variables).

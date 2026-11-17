@@ -4,7 +4,7 @@ import { conditionalUpdate, reserveAttempt, type ConditionalStore } from '../lib
 import { newRecord, changeRecord, type NewspaperRecord } from '../lib/records';
 import { SAMPLE } from '../lib/content';
 import type { Attempts } from '../lib/auth-core';
-const content={...SAMPLE,portrait:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII='};
+const content={...SAMPLE,portrait:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII=',groupPhoto:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII=',memoryPhoto:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII='};
 function memory<T>(initial:T|undefined):ConditionalStore<T>{
  let value=initial,revision=initial?1:0;
  return {async read(){return value?{value:structuredClone(value),etag:String(revision)}:null;},async write(next,expected){if((expected===undefined && value!==undefined) || (expected!==undefined && expected!==String(revision)))throw new Error('Conflict');value=structuredClone(next);return String(++revision);}};

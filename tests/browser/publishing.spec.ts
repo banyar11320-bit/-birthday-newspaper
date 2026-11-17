@@ -1,0 +1,33 @@
+import { test,expect } from '@playwright/test';
+import { SAMPLE } from '../../lib/content';
+test.skip(process.env.QA_MOCK_BLOB!=='1','Run with QA_MOCK_BLOB=1 for isolated storage.');
+test('three photos: save, reload, publish, private edits and real conflict recovery',async({page,browser})=>{
+ await page.goto('/admin');
+ await page.getByLabel('Username').fill('qa-admin');await page.getByLabel('Password',{exact:true}).fill('local-qa-password-only');
+ await page.getByRole('button',{name:'Log in',exact:true}).click();
+ await page.getByRole('link',{name:'Create Newspaper',exact:true}).click();
+ const fields={name:'Member name',birthday:'Birthday',headline:'Main headline',story:'Birthday story',memories:'Favorite memories',wishes:'Birthday wishes',closing:'Closing message'};
+ for(const [key,label] of Object.entries(fields))await page.getByLabel(label,{exact:true}).fill(SAMPLE[key as keyof typeof fields]);
+ for(const label of ['Member portrait','Group photo','Memory photo'])await page.getByLabel(label,{exact:true}).setInputFiles('tests/fixtures/portrait.png');
+ await expect(page.locator('.paper img')).toHaveCount(3);
+ let submissions=0;page.on('request',request=>{if(request.method()==='POST' && request.url().endsWith('/api/newspapers'))submissions++;});
+ await page.evaluate(()=>{const form=document.querySelector('form')!;form.requestSubmit();form.requestSubmit();});
+ await expect(page.getByText('Draft saved.',{exact:true})).toBeVisible();expect(submissions).toBe(1);
+ const id=page.url().split('/').at(-1)!;
+ const publicContext=await browser.newContext();const publicPage=await publicContext.newPage();
+ expect((await publicPage.goto(`/birthday/${id}`))?.status()).toBe(404);
+ await page.reload();await expect(page.locator('.paper img')).toHaveCount(3);await expect(page.getByLabel('Birthday story',{exact:true})).toHaveValue(SAMPLE.story);
+ // Replacing one image must not consume a server revision or erase either other slot.
+ await page.getByLabel('Group photo',{exact:true}).setInputFiles('tests/fixtures/portrait.png');
+ await page.getByRole('button',{name:'Publish',exact:true}).click();await expect(page.getByText('Published. Your birthday link is ready to share.',{exact:true})).toBeVisible();
+ expect((await publicPage.goto(`/birthday/${id}`))?.status()).toBe(200);await expect(publicPage.locator('.paper img')).toHaveCount(3);
+ await expect.poll(()=>publicPage.locator('.paper img').evaluateAll(images=>images.every(image=>(image as HTMLImageElement).naturalWidth>0))).toBe(true);
+ await publicPage.emulateMedia({media:'print'});await publicPage.pdf({path:'artifacts/published-three-photos.pdf',preferCSSPageSize:true,printBackground:true});
+ const stale=await page.context().newPage();await stale.goto(page.url());
+ await page.getByLabel('Birthday story',{exact:true}).fill('Private changes not published');await page.getByRole('button',{name:'Save Draft',exact:true}).click();await expect(page.getByText('Draft saved.',{exact:true})).toBeVisible();
+ await publicPage.reload();await expect(publicPage.locator('.story-section')).toContainText(SAMPLE.story);
+ await stale.getByLabel('Birthday story',{exact:true}).fill('Stale changes kept in this tab');await stale.getByRole('button',{name:'Publish',exact:true}).click();
+ await expect(stale.locator('.error[role=alert]')).toContainText('Copy your unsaved text');await expect(stale.getByLabel('Birthday story',{exact:true})).toHaveValue('Stale changes kept in this tab');
+ await page.reload();await expect(page.getByLabel('Birthday story',{exact:true})).toHaveValue('Private changes not published');
+ await publicContext.close();await stale.close();
+});

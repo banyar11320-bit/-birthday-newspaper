@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LIMITS } from '../../lib/content';
-const origin='http://127.0.0.1:3017';
+const origin='http://127.0.0.1:3027';
 test('unauthorized writes, cross-site requests, draft reads and portraits fail closed',async({request})=>{
  const id='00000000-0000-4000-8000-000000000000';
  expect((await request.post('/api/newspapers',{headers:{origin},data:{}})).status()).toBe(401);
@@ -31,6 +31,13 @@ test('local edit, photo, unsaved warning, responsive widths and print artifacts'
  await expect(page.locator('.error[role=alert]')).toContainText('JPEG or PNG');
  await page.getByLabel('Member portrait',{exact:true}).setInputFiles('tests/fixtures/portrait.png');
  await expect(page.locator('.portrait img')).toBeVisible();
+ for(const label of ['Group photo','Memory photo'])await page.getByLabel(label,{exact:true}).setInputFiles('tests/fixtures/portrait.png');
+ await expect(page.locator('.memory-photos img')).toHaveCount(2);
+ const portrait=await page.locator('.portrait img').getAttribute('src');
+ await page.getByRole('button',{name:'Remove group photo',exact:true}).click();
+ await expect(page.locator('.memoryPhoto img')).toBeVisible();expect(await page.locator('.portrait img').getAttribute('src')).toBe(portrait);
+ await page.getByLabel('Group photo',{exact:true}).setInputFiles('tests/fixtures/portrait.png');
+ await expect(page.locator('.memory-photos img')).toHaveCount(2);
  for(const width of [320,375,390,430,1280]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);}
  await page.getByRole('button',{name:'Preview',exact:true}).click();
  for(const width of [320,375,390,430,1280]){

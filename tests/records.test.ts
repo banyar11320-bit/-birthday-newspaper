@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SAMPLE as sample } from '../lib/content';
-const SAMPLE = {...sample, portrait:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII='};
+const SAMPLE = {...sample, portrait:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII=',groupPhoto:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII=',memoryPhoto:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJ1kAAAAASUVORK5CYII='};
 import { changeRecord, newRecord, publicContent } from '../lib/records';
+test('publishing requires each of the three photos but incomplete drafts can be saved',()=>{
+ for(const key of ['portrait','groupPhoto','memoryPhoto'] as const){
+  const incomplete={...SAMPLE,[key]:''};const record=newRecord(incomplete);
+  assert.equal(record.draft![key],'');assert.throws(()=>changeRecord(record,'publish',incomplete),/three photos/);
+ }
+});
 test('member IDs and slugs are unique and stable across name edits',()=>{
  const a=newRecord(SAMPLE), b=newRecord(SAMPLE);
  assert.notEqual(a.id,b.id);
